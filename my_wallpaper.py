@@ -1,17 +1,25 @@
-from hyprpaper import HyprPaper
 from pathlib import Path
 import time
 import logging
-
-import arguments
-from monitors import get_monitors, get_monitor_name
-import wallpaperslib
 import random
+
 import mycache
+import arguments
+
+import wallpaperslib
+
+from monitors import get_monitors, get_monitor_name
+
+from wallpaper_engine import WallpaperEngine
 
 
-def preload_wallpapers(hpaper: HyprPaper, wallpapers: list[Path]):
-    all_loaded = hpaper.listloaded()
+from hyprpaper import HyprPaper
+
+def preload_wallpapers(engine: WallpaperEngine, wallpapers: list[Path]):
+    if not engine.needs_to_preload():
+        return
+
+    all_loaded = engine.listloaded()
 
     logging.info("Loaded Wallpapers: ")
     for loaded in all_loaded:
@@ -27,22 +35,18 @@ def preload_wallpapers(hpaper: HyprPaper, wallpapers: list[Path]):
             continue
         are_all_loaded = False
         logging.info(f"Loading: {wallpaper}")
-        hpaper.preload(wallpaper)
+        engine.preload(wallpaper)
 
     if are_all_loaded:
         logging.info("All wallpapers are loaded")
 
 
-def wait_hyprpaper():
-    hpaper = HyprPaper()
-
-    if not hpaper.is_running():
-        time.sleep(0)
-        while not hpaper.is_running():
+def wait_engine(engine: WallpaperEngine):
+    if not engine.is_running():
+        time.sleep(1)
+        while not engine.is_running():
             logging.info(f"Waiting Hyprpaper start")
-            time.sleep(0)
-
-    return hpaper
+            time.sleep(1)
 
 
 def get_monitor_names():
@@ -99,7 +103,7 @@ def choose_wallpapers(n: int, cache: mycache.Cache):
     return out_tuple
 
 
-def set_wallpapers(hpaper: HyprPaper, monitors: list[str], wallpapers: list[Path]):
+def set_wallpapers(engine: WallpaperEngine, monitors: list[str], wallpapers: list[Path]):
     if len(wallpapers) != len(monitors):
         raise ValueError("Number of monitors and wallpapers must be equal")
 
@@ -108,20 +112,20 @@ def set_wallpapers(hpaper: HyprPaper, monitors: list[str], wallpapers: list[Path
         wallpaper = wallpapers[i]
 
         logging.info(f"{monitor}: {wallpaper}")
-        hpaper.wallpaper(monitor, wallpaper)
+        engine.wallpaper(monitor, wallpaper)
 
 
-def random_wallpapers():
+def random_wallpapers(engine: WallpaperEngine):
     monitor_names = get_monitor_names()
 
     cache = mycache.Cache()
     _, chosen_wallpapers = choose_wallpapers(len(monitor_names), cache)
 
-    hpaper = wait_hyprpaper()
+    wait_engine(engine)
 
-    preload_wallpapers(hpaper, chosen_wallpapers)
+    preload_wallpapers(engine, chosen_wallpapers)
 
-    set_wallpapers(hpaper, monitor_names, chosen_wallpapers)
+    set_wallpapers(engine, monitor_names, chosen_wallpapers)
 
 
 def shift_wallpapers(mn_wp_list: list[tuple[str, str]]):
@@ -135,25 +139,29 @@ def shift_wallpapers(mn_wp_list: list[tuple[str, str]]):
     return shifted_list
 
 
-def switch_wallpapers():
-    hpaper = wait_hyprpaper()
+def switch_wallpapers(engine: WallpaperEngine):
+    wait_engine(engine)
 
-    active_wallpapers = hpaper.listactive()
+    active_wallpapers = engine.listactive()
+    logging.info(f"Active wallpapers: {active_wallpapers}")
 
     shifted_list = shift_wallpapers(active_wallpapers)
+    logging.info(f"Shifted wallpapers: {shifted_list}")
 
     monitor_names = [mn_wp[0] for mn_wp in shifted_list]
     wallpapers = [Path(mn_wp[1]) for mn_wp in shifted_list]
 
-    set_wallpapers(hpaper, monitor_names, wallpapers)
-
+    set_wallpapers(engine, monitor_names, wallpapers)
 
 def main(options: set):
+    hpaper = HyprPaper()
+
     if "switch" in options:
-        switch_wallpapers()
+        switch_wallpapers(hpaper)
         return
     if "random" in options:
-        random_wallpapers()
+        random_wallpapers(hpaper)
+        return
     raise ValueError("No option selected")
 
 
