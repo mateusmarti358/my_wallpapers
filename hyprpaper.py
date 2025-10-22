@@ -1,4 +1,3 @@
-from typing import Tuple
 import pgrep
 import os
 import subprocess
@@ -9,21 +8,21 @@ HYPRPAPER_CMD = "hyprctl hyprpaper"
 
 
 class HyprPaper(WallpaperEngine):
-    def is_running(self) -> bool:
+    def is_callable(self) -> bool:
         return len(pgrep.pgrep("hyprpaper")) != 0
 
     def needs_to_preload(self) -> bool:
         return True
 
     def listloaded(self) -> list[str]:
-        if not self.is_running():
+        if not self.is_callable():
             return []
         cmd = ["hyprctl", "hyprpaper", "listloaded"]
         out = subprocess.run(cmd, capture_output=True).stdout.decode("utf-8")
         return str(out).split("\n")
 
-    def listactive(self) -> list[Tuple[str, str]]:
-        if not self.is_running():
+    def listactive(self) -> list[tuple[str, str]]:
+        if not self.is_callable():
             return []
         cmd = ["hyprctl", "hyprpaper", "listactive"]
 
@@ -42,13 +41,13 @@ class HyprPaper(WallpaperEngine):
         return out
 
     def preload(self, wallpaper):
-        if not self.is_running():
+        if not self.is_callable():
             return None
         preload_cmd = f"{HYPRPAPER_CMD} preload {wallpaper}"
         os.system(preload_cmd)
 
     def wallpaper(self, monitor_name, wallpaper_path):
-        if not self.is_running():
+        if not self.is_callable():
             return None
         mon_wpp_str = f'"{monitor_name},{wallpaper_path}"'
         setwallpaper_cmd = f"{HYPRPAPER_CMD} wallpaper {mon_wpp_str}"

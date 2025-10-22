@@ -12,8 +12,8 @@ from monitors import get_monitors, get_monitor_name
 
 from wallpaper_engine import WallpaperEngine
 
-
 from hyprpaper import HyprPaper
+from swaybg import Swaybg
 
 def preload_wallpapers(engine: WallpaperEngine, wallpapers: list[Path]):
     if not engine.needs_to_preload():
@@ -42,10 +42,10 @@ def preload_wallpapers(engine: WallpaperEngine, wallpapers: list[Path]):
 
 
 def wait_engine(engine: WallpaperEngine):
-    if not engine.is_running():
+    if not engine.is_callable():
         time.sleep(1)
-        while not engine.is_running():
-            logging.info(f"Waiting Hyprpaper start")
+        while not engine.is_callable():
+            logging.info(f"Waiting {engine.get_name()} start")
             time.sleep(1)
 
 
@@ -128,7 +128,7 @@ def random_wallpapers(engine: WallpaperEngine):
     set_wallpapers(engine, monitor_names, chosen_wallpapers)
 
 
-def shift_wallpapers(mn_wp_list: list[tuple[str, str]]):
+def shift_wallpaper_list(mn_wp_list: list[tuple[str, str]]):
     wallpapers = [mn_wp[1] for mn_wp in mn_wp_list]
     wallpapers = [wallpapers[-1]] + wallpapers[:-1]
 
@@ -145,7 +145,7 @@ def switch_wallpapers(engine: WallpaperEngine):
     active_wallpapers = engine.listactive()
     logging.info(f"Active wallpapers: {active_wallpapers}")
 
-    shifted_list = shift_wallpapers(active_wallpapers)
+    shifted_list = shift_wallpaper_list(active_wallpapers)
     logging.info(f"Shifted wallpapers: {shifted_list}")
 
     monitor_names = [mn_wp[0] for mn_wp in shifted_list]
@@ -154,15 +154,23 @@ def switch_wallpapers(engine: WallpaperEngine):
     set_wallpapers(engine, monitor_names, wallpapers)
 
 def main(options: set):
-    hpaper = HyprPaper()
+    engine = None
+    if 'swaybg' in options:
+        engine = Swaybg()
+    if 'hyprpaper' in options:
+        engine = HyprPaper()
+
+    if not engine:
+        raise ValueError("No engine selected")
 
     if "switch" in options:
-        switch_wallpapers(hpaper)
+        switch_wallpapers(engine)
         return
     if "random" in options:
-        random_wallpapers(hpaper)
+        random_wallpapers(engine)
         return
-    raise ValueError("No option selected")
+
+    raise ValueError("No function selected")
 
 
 if __name__ == "__main__":
